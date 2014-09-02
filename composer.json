@@ -1,0 +1,13 @@
+{
+    "name": "abhishekdutt/oauth2-php-demo",
+    "description": "Demo implimentation of OAuth2",
+    "require": {
+        "slim/slim": "2.*"
+    },
+    "authors": [
+        {
+            "name": "Abhishek Dutt",
+            "email": "abhishekdutt@outlook.com"
+        }
+    ]
+}
