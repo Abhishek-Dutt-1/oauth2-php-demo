@@ -1,11 +1,45 @@
 <?php
+$config = require 'config.php';
 require 'vendor/autoload.php';
-require 'database.php';
+require 'oauth2/database.php';
 
-$db = new Database();
+//	OAuth2-server implementations
+require 'oauth2/Storage/SessionStorage.php';
+require 'oauth2/Storage/AccessTokenStorage.php';
+require 'oauth2/Storage/ClientStorage.php';
+require 'oauth2/Storage/ScopeStorage.php';
+require 'oauth2/Storage/AuthCodeStorage.php';
+require 'oauth2/Storage/RefreshTokenStorage.php';
+
+$db = new \AbhishekDutt\oauth2\Database($config["connections"]["mysql"]);
 $app = new \Slim\Slim();
 
 
+////////// OAUTH2 SERVER
+//		Resource server
+$sessionStorage = new RelationalExample\Storage\SessionStorage();
+$accessTokenStorage = new RelationalExample\Storage\AccessTokenStorage();
+$clientStorage = new RelationalExample\Storage\ClientStorage();
+$scopeStorage = new RelationalExample\Storage\ScopeStorage();
+$resourceServer = new League\OAuth2\Server\ResourceServer(
+    $sessionStorage,
+    $accessTokenStorage,
+    $clientStorage,
+    $scopeStorage
+);
+// Authorization server
+$server = new League\OAuth2\Server\AuthorizationServer;
+$server->setSessionStorage(new RelationalExample\Storage\SessionStorage);
+$server->setAccessTokenStorage(new RelationalExample\Storage\AccessTokenStorage);
+$server->setRefreshTokenStorage(new RelationalExample\Storage\RefreshTokenStorage);
+$server->setClientStorage(new RelationalExample\Storage\ClientStorage);
+$server->setScopeStorage(new RelationalExample\Storage\ScopeStorage);
+$server->setAuthCodeStorage(new RelationalExample\Storage\AuthCodeStorage);
+$authCodeGrant = new \League\OAuth2\Server\Grant\AuthCodeGrant();
+$server->addGrantType($authCodeGrant);
+/////////// End OAuth Config ////////////
+
+//	User CRUD
 $app->group("/users", function() use ($app, $db) {
 
     $app->get("/", function() use ($db) {
@@ -57,34 +91,11 @@ $app->group("/users", function() use ($app, $db) {
 
 });
 
-//      THE OAUTH2 SERVER
-//      THE RESOURSE SERVER
-/*
-If you are using the resource server you need to implement the following interfaces:
-League\OAuth2\Server\Storage\SessionInterface - contains methods for retrieving and setting sessions
-League\OAuth2\Server\Storage\AccessTokenInterface - contains methods for retrieving, creating and deleting access tokens
-League\OAuth2\Server\Storage\ClientStorage - single method to get a client
-League\OAuth2\Server\Storage\ScopeStorage - single method to get a scope
-*/
-//      THE AUTHORIZATION SERVER
-$server = new \League\OAuth2\Server\AuthorizationServer;
-
-$server->setSessionStorage(new Storage\SessionStorage);
-$server->setAccessTokenStorage(new Storage\AccessTokenStorage);
-$server->setClientStorage(new Storage\ClientStorage);
-$server->setScopeStorage(new Storage\ScopeStorage);
-
-$passwordGrant = new \League\OAuth2\Server\Grant\PasswordGrant();
-$passwordGrant->setVerifyCredentialsCallback(function ($username, $password) {
-    // implement logic here to validate a username and password, return an ID if valid, otherwise return false
+/////////// OAuth Routes
+$app->get('/access_token', function () use ($server) {
+	return $response = $server->issueAccessToken();
 });
 
-/*
-If you are using the authorization server you need to implement the following interfaces:
-League\OAuth2\Server\Storage\SessionInterface - contains methods for retrieving and setting sessions
-League\OAuth2\Server\Storage\AccessTokenInterface - contains methods for retrieving, creating and deleting access tokens
-League\OAuth2\Server\Storage\ClientStorage - single method to get a client
-League\OAuth2\Server\Storage\ScopeStorage - single method to get a scope
-*/
+
 
 $app->run();
